@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>數學探險島 🏝️</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a2e}
+body{font-family:'Noto Sans HK',sans-serif;touch-action:manipulation;-webkit-user-select:none;user-select:none;display:flex;align-items:center;justify-content:center}
+#app{position:relative;width:100%;max-width:480px;height:100dvh;max-height:850px;overflow:hidden;background:linear-gradient(180deg,#0a0a2e,#1a1a4e)}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;overflow:hidden}
+.screen.active{display:flex}
+
+/* ===== TITLE SCREEN ===== */
+.title-screen{background:linear-gradient(135deg,#0a0a2e,#1a1a5e,#0a0a2e);justify-content:center;gap:12px;padding:20px}
+.wave{position:absolute;bottom:0;left:0;right:0;height:120px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%231a5c8e' fill-opacity='.3' d='M0,96L48,122.7C96,149,192,203,288,218.7C384,235,480,213,576,186.7C672,160,768,128,864,138.7C960,149,1056,203,1152,208C1248,213,1344,171,1392,149.3L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'/%3E%3C/svg%3E") repeat-x bottom/contain;pointer-events:none;animation:wave 8s linear infinite}
+@keyframes wave{0%{background-position-x:0}100%{background-position-x:1440px}}
+.title-icon{font-size:72px;animation:float 3s ease-in-out infinite;filter:drop-shadow(0 4px 20px rgba(100,200,255,.3))}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.title-h1{font-size:32px;font-weight:900;color:#fbbf24;text-shadow:0 3px 0 #92400e,0 0 40px rgba(251,191,36,.2)}
+.title-sub{color:#88aacc;font-size:14px;margin-top:2px}
+.title-btn{font-family:inherit;font-size:18px;font-weight:900;padding:16px 48px;border:none;border-radius:16px;cursor:pointer;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;box-shadow:0 5px 0 #b45309;transition:all .08s;margin-top:16px;touch-action:manipulation}
+.title-btn:active{transform:translateY(4px);box-shadow:0 1px 0 #b45309}
+.title-credit{color:#445;font-size:10px;margin-top:12px}
+
+/* ===== MAP SCREEN ===== */
+.map-screen{background:linear-gradient(180deg,#0a1a3a,#1a3a6a)}
+.map-header{width:100%;padding:16px 16px 8px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.map-title{color:#fbbf24;font-weight:900;font-size:16px}
+.map-stickers{font-size:12px;color:#88aacc}
+.map-scroll{flex:1;overflow-y:auto;width:100%;padding:8px 16px 20px;-webkit-overflow-scrolling:touch}
+.map-scroll::-webkit-scrollbar{display:none}
+.island{background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.02));border-radius:20px;padding:16px;margin-bottom:12px;border:2px solid rgba(255,255,255,.08);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden}
+.island:active{transform:scale(.97)}
+.island.locked{opacity:.4;cursor:not-allowed}
+.island.locked:active{transform:none}
+.island.completed{border-color:#4ade80;background:linear-gradient(135deg,rgba(74,222,128,.12),rgba(74,222,128,.04))}
+.island-icon{font-size:40px;flex-shrink:0}
+.island-info{flex:1}
+.island-name{font-weight:900;font-size:16px;color:#fff}
+.island-desc{font-size:11px;color:#88aacc;margin-top:2px}
+.island-progress{font-size:10px;color:#4ade80;margin-top:2px}
+.island-status{font-size:24px;flex-shrink:0}
+.island-done{position:absolute;top:-5px;right:-5px;font-size:18px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
+
+/* ===== GAME SCREEN ===== */
+.game-screen{background:linear-gradient(180deg,#0a0a2e,#1a1a4e)}
+.game-header{width:100%;padding:10px 12px 6px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;z-index:2}
+.game-back{font-size:24px;background:none;border:none;cursor:pointer;padding:4px 8px;touch-action:manipulation;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
+.game-back:active{transform:scale(.9)}
+.game-level{color:#aac;font-size:11px;font-weight:700}
+.game-hearts{font-size:16px}
+.game-area{flex:1;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;position:relative;overflow:hidden}
+.game-feedback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;font-size:64px;animation:fadeUp .6s ease-out forwards}
+@keyframes fadeUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-60px) scale(1.3)}}
+.game-done{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:10;padding:20px}
+.game-done.hide{display:none}
+.game-done-icon{font-size:56px;margin-bottom:8px;animation:bounce .5s ease-in-out}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.game-done-title{color:#4ade80;font-weight:900;font-size:20px;margin-bottom:4px}
+.game-done-sub{color:#aac;font-size:13px;margin-bottom:16px;text-align:center}
+.game-done-sticker{font-size:48px;margin-bottom:8px;filter:drop-shadow(0 0 20px rgba(251,191,36,.5))}
+.game-done-btn{font-family:inherit;font-size:16px;font-weight:900;padding:12px 32px;border:none;border-radius:14px;cursor:pointer;background:linear-gradient(135deg,#4ade80,#22c55e);color:#000;box-shadow:0 4px 0 #166534;transition:all .08s;touch-action:manipulation}
+.game-done-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #166534}
+
+/* ===== BALLOON GAME ===== */
+.balloon-area{position:relative;flex:1;width:100%;overflow:hidden}
+.balloon{position:absolute;font-size:48px;cursor:pointer;transition:transform .15s;touch-action:manipulation;animation:none}
+.balloon:active{transform:scale(.85)}
+.balloon-label{position:absolute;font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);pointer-events:none;width:100%;text-align:center;top:50%;left:50%;transform:translate(-50%,-50%)}
+.balloon-obj{position:absolute;font-size:28px;pointer-events:none}
+.count-options{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:10px 8px;flex-shrink:0}
+.count-btn{font-family:inherit;font-size:20px;font-weight:900;width:52px;height:52px;border:none;border-radius:12px;cursor:pointer;background:#1a1a4e;color:#fff;border:2px solid #334;transition:all .08s;touch-action:manipulation}
+.count-btn:active{background:#2a2a6e;transform:scale(.9)}
+.count-btn.correct{background:#4ade80;border-color:#22c55e;color:#000}
+.count-btn.wrong{background:#ef4444;border-color:#dc2626;animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.count-question{font-size:20px;color:#fff;font-weight:700;padding:6px 12px;background:rgba(0,0,0,.3);border-radius:12px;margin-bottom:6px;text-align:center;flex-shrink:0}
+
+/* ===== FISHING GAME ===== */
+.fishing-area{position:relative;flex:1;width:100%;overflow:hidden;background:linear-gradient(180deg,#0a2a4a,#0a3a6a)}
+.fish{position:absolute;font-size:36px;cursor:pointer;transition:transform .15s;touch-action:manipulation;animation:swim 3s ease-in-out infinite}
+@keyframes swim{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.fish:active{transform:scale(.8)!important}
+.fish-label{font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);margin-top:2px;text-align:center}
+.fishing-rod{position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:32px;z-index:2;animation:rodBob 1.5s ease-in-out infinite}
+@keyframes rodBob{0%,100%{transform:translateX(-50%) rotate(0)}50%{transform:translateX(-50%) rotate(5deg)}}
+.fishing-question{font-size:28px;color:#fff;font-weight:900;padding:8px 16px;background:rgba(0,0,0,.4);border-radius:16px;border:2px solid rgba(255,255,255,.1);z-index:3}
+
+/* ===== SHOPPING GAME ===== */
+.shop-area{flex:1;width:100%;display:flex;flex-direction:column;align-items:center;padding:8px;gap:8px}
+.shop-item{font-size:64px;margin-bottom:2px;animation:float 3s ease-in-out infinite}
+.shop-price{font-size:32px;color:#fbbf24;font-weight:900;text-shadow:0 2px 8px rgba(251,191,36,.3)}
+.shop-coin-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:6px 0}
+.shop-coin{font-size:32px;cursor:pointer;transition:all .1s;touch-action:manipulation;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
+.shop-coin:active{transform:scale(.85)}
+.shop-coin.used{opacity:.3;transform:scale(.8)}
+.shop-total{color:#aac;font-size:14px;text-align:center;padding:6px 12px;background:rgba(0,0,0,.3);border-radius:10px;margin-top:4px}
+.shop-total.ok{color:#4ade80;font-weight:700}
+.shop-pay-btn{font-family:inherit;font-size:16px;font-weight:900;padding:10px 28px;border:none;border-radius:12px;cursor:pointer;color:#000;box-shadow:0 4px 0 #166534;transition:all .08s;touch-action:manipulation}
+.shop-pay-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #166534}
+.shop-pay-btn.ok{background:linear-gradient(135deg,#4ade80,#22c55e)}
+.shop-pay-btn.no{background:#555;color:#888;box-shadow:0 4px 0 #333;cursor:not-allowed}
+
+/* ===== STICKER BOOK ===== */
+.sticker-overlay{position:absolute;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);z-index:20;display:none;flex-direction:column;align-items:center;padding:20px;overflow-y:auto}
+.sticker-overlay.show{display:flex}
+.sticker-title{color:#fbbf24;font-weight:900;font-size:18px;margin-bottom:12px}
+.sticker-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;max-width:320px}
+.sticker-slot{aspect-ratio:1;background:rgba(255,255,255,.05);border-radius:14px;border:2px dashed rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:32px}
+.sticker-slot.filled{border-style:solid;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+.sticker-close{font-family:inherit;font-size:14px;font-weight:700;padding:10px 24px;border:none;border-radius:12px;cursor:pointer;background:#fbbf24;color:#000;margin-top:16px;touch-action:manipulation}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ====== TITLE SCREEN ====== -->
+<div class="screen title-screen active" id="titleScreen">
+  <div class="wave"></div>
+  <div class="title-icon">🏝️</div>
+  <div class="title-h1">數學探險島</div>
+  <div class="title-sub">小一數學 · 邊玩邊學 🎮</div>
+  <button class="title-btn" onclick="showMap()">🚀 開始探險</button>
+  <div class="title-credit">for 👦👦</div>
+</div>
+
+<!-- ====== MAP SCREEN ====== -->
+<div class="screen map-screen" id="mapScreen">
+  <div class="map-header">
+    <div class="map-title">🏝️ 探險地圖</div>
+    <div class="map-stickers" onclick="toggleStickers()">🏆 <span id="stickerCount">0</span>/24 貼紙 📖</div>
+  </div>
+  <div class="map-scroll" id="mapScroll"></div>
+</div>
+
+<!-- ====== GAME SCREEN ====== -->
+<div class="screen game-screen" id="gameScreen">
+  <div class="game-header">
+    <button class="game-back" onclick="backToMap()">⬅️</button>
+    <div class="game-level" id="gameLevel">第 1 關</div>
+    <div class="game-hearts" id="gameHearts">❤️❤️❤️</div>
+  </div>
+  <div id="gameContent" class="game-area"></div>
+  <div class="game-done hide" id="gameDone">
+    <div class="game-done-icon" id="doneIcon">🎉</div>
+    <div class="game-done-sticker" id="doneSticker"></div>
+    <div class="game-done-title" id="doneTitle">好好彩！</div>
+    <div class="game-done-sub" id="doneDesc">你得到咗一張新貼紙！</div>
+    <button class="game-done-btn" onclick="backToMap()">🏠 返落地圖</button>
+  </div>
+</div>
+
+<!-- ====== STICKER BOOK ====== -->
+<div class="sticker-overlay" id="stickerBook">
+  <div class="sticker-title">📖 貼紙簿</div>
+  <div class="sticker-grid" id="stickerGrid"></div>
+  <button class="sticker-close" onclick="toggleStickers()">關閉</button>
+</div>
+
+</div>
+
+<script>
+/* ============================================
+   數學探險島 — P1 Math Island
+   ============================================ */
+
+// ─── STICKERS ───
+const ALL_STICKERS = [
+  // Island 1: 數氣球 (8 stickers)
+  '🐶','🐱','🐰','🐼','🦊','🐸','🐵','🦄',
+  // Island 2: 釣魚 (8 stickers)
+  '🐟','🐠','🐡','🐙','🦐','🐬','🐳','🐋',
+  // Island 3: 買嘢食 (8 stickers)
+  '🍎','🍊','🍋','🍇','🍓','🍑','🍒','🍌',
+]
+
+const ISLANDS = [
+  {
+    id:'balloon', name:'🎈 數字海灘', desc:'數氣球、學數數',
+    icon:'🏖️', levels:[
+      { title:'數一數', desc:'數下有幾多個波板糖', type:'count', maxNum:5 },
+      { title:'數多啲', desc:'數下有幾多粒星星', type:'count', maxNum:10 },
+      { title:'數到20', desc:'數下有幾多個波', type:'count', maxNum:20 },
+      { title:'順序數', desc:'㩒啱順序嘅數字', type:'sequence', mode:'forward' },
+      { title:'倒轉數', desc:'㩒啱倒轉嘅數字', type:'sequence', mode:'backward' },
+      { title:'單數', desc:'㩒出所有單數', type:'oddEven', mode:'odd' },
+      { title:'雙數', desc:'㩒出所有雙數', type:'oddEven', mode:'even' },
+      { title:'分解王', desc:'邊兩個數加埋等於', type:'decompose' },
+    ], stickerOffset:0
+  },
+  {
+    id:'fishing', name:'🐟 釣魚樂園', desc:'加減法釣魚',
+    icon:'🎣', levels:[
+      { title:'加法 1', desc:'魚仔身上有答案', type:'addSub', maxVal:5 },
+      { title:'加法 2', desc:'搵到啱嘅魚', type:'addSub', maxVal:10 },
+      { title:'加法 3', desc:'計快啲', type:'addSub', maxVal:10, count:3 },
+      { title:'減法 1', desc:'減法都識', type:'addSub', mode:'sub', maxVal:5 },
+      { title:'減法 2', desc:'減法練習', type:'addSub', mode:'sub', maxVal:10 },
+      { title:'加減混合', desc:'又加又減', type:'addSub', mode:'mix', maxVal:10 },
+      { title:'三個數', desc:'三個數加埋', type:'addSub', mode:'triple', maxVal:10 },
+      { title:'0 的魔法', desc:'認識 0 嘅加減', type:'addSub', mode:'zero', maxVal:10 },
+    ], stickerOffset:8
+  },
+  {
+    id:'shop', name:'💰 購物小鎮', desc:'俾錢買嘢食',
+    icon:'🏪', levels:[
+      { title:'認識銀仔', desc:'㩒啱嘅銀仔', type:'coinID' },
+      { title:'1蚊', desc:'俾啱 1 蚊', type:'pay', amount:1 },
+      { title:'2蚊', desc:'俾啱 2 蚊', type:'pay', amount:2 },
+      { title:'5蚊', desc:'俾啱 5 蚊', type:'pay', amount:5 },
+      { title:'組合 1', desc:'俾啱 3 蚊', type:'pay', amount:3 },
+      { title:'組合 2', desc:'俾啱 6 蚊', type:'pay', amount:6 },
+      { title:'組合 3', desc:'俾啱 8 蚊', type:'pay', amount:8 },
+      { title:'10蚊', desc:'俾啱 10 蚊', type:'pay', amount:10 },
+    ], stickerOffset:16
+  },
+]
+
+// ─── STATE ───
+let state = {
+  progress: JSON.parse(localStorage.getItem('mathIsland') || '{}'),
+  stickers: JSON.parse(localStorage.getItem('mathIslandStickers') || '[]'),
+  currentIsland: 0,
+  currentLevel: 0,
+  hearts: 3,
+  coins: [],
+  coinsUsed: [],
+}
+
+function save(){localStorage.setItem('mathIsland',JSON.stringify(state.progress));localStorage.setItem('mathIslandStickers',JSON.stringify(state.stickers))}
+function hasIsland(i){return state.progress[ISLANDS[i].id]||0}
+function setIsland(i,v){state.progress[ISLANDS[i].id]=v;save()}
+function levelDone(i,l){return hasIsland(i)>l}
+function stickerOwned(idx){return state.stickers.includes(idx)}
+function addSticker(idx){if(!stickerOwned(idx)){state.stickers.push(idx);save()}}
+
+// ─── AUDIO ───
+let actx=null
+function a(){if(!actx){const C=window.AudioContext||window.webkitAudioContext;if(!C)return;actx=new C()}if(actx.state==='suspended')actx.resume()}
+function beep(f,d,v=.06){a();if(!actx)return;try{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(v,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+d);o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+d)}catch(e){}}
+function cheer(){beep(523,.1);setTimeout(()=>beep(659,.1),80);setTimeout(()=>beep(784,.12),160)}
+function boop(){beep(300,.08,.04)}
+
+// ─── SCREEN NAV ───
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
+
+function showMap(){
+  show('mapScreen')
+  renderMap()
+}
+
+function backToMap(){show('mapScreen');renderMap()}
+
+// ─── RENDER MAP ───
+function renderMap(){
+  const c=document.getElementById('mapScroll')
+  let h=''
+  const total=ALL_STICKERS.length
+  const owned=state.stickers.length
+  document.getElementById('stickerCount').textContent=owned
+  ISLANDS.forEach((is,i)=>{
+    const doneLv=hasIsland(i)
+    const locked=i>0&&doneLv<ISLANDS[i-1].levels.length
+    const allDone=doneLv>=is.levels.length
+    h+=`<div class="island${locked?' locked':''}${allDone?' completed':''}" onclick="${locked?'':'startIsland('+i+')'}">
+      <div class="island-icon">${is.icon}</div>
+      <div class="island-info">
+        <div class="island-name">${is.name}</div>
+        <div class="island-desc">${is.desc}</div>
+        <div class="island-progress">${locked?'🔒 完成前一關先':allDone?'✅ 完成！':doneLv+'/'+is.levels.length+' 關'}</div>
+      </div>
+      <div class="island-status">${allDone?'🏆':locked?'🔒':'👉'}</div>
+    </div>`
+  })
+  c.innerHTML=h
+}
+
+// ─── START ISLAND ───
+function startIsland(idx){
+  state.currentIsland=idx
+  state.currentLevel=hasIsland(idx)
+  state.hearts=3
+  show('gameScreen')
+  runLevel()
+}
+
+// ─── LEVEL COMPLETE ───
+function levelComplete(){
+  const is=ISLANDS[state.currentIsland]
+  const lv=state.currentLevel
+  const idx=is.stickerOffset+lv
+  addSticker(idx)
+  const st=ALL_STICKERS[idx]
+  
+  if(state.currentLevel+1>hasIsland(state.currentIsland))
+    setIsland(state.currentIsland,state.currentLevel+1)
+  
+  const allDone=hasIsland(state.currentIsland)>=is.levels.length
+  document.getElementById('doneIcon').textContent=allDone?'🏆':'🎉'
+  document.getElementById('doneSticker').textContent=`獲得貼紙：${st}`
+  document.getElementById('doneTitle').textContent=allDone?'🏆 完成晒成個島！':'⭐ 勁呀！過關啦！'
+  document.getElementById('doneDesc').textContent=allDone?`你得到咗${is.icon}嘅終極獎勵！`:`繼續努力，下關仲刺激！`
+  document.getElementById('gameDone').classList.remove('hide')
+  cheer()
+}
+
+// ─── GAME OVER ───
+function gameOver(){
+  beep(200,.2)
+  document.getElementById('doneIcon').textContent='😅'
+  document.getElementById('doneSticker').textContent=''
+  document.getElementById('doneTitle').textContent='差少少咋！'
+  document.getElementById('doneDesc').textContent='再試一次，你一定得嘅！💪'
+  document.getElementById('gameDone').classList.remove('hide')
+}
+
+// ═══════════════════════════════════════════
+// RUN LEVEL
+// ═══════════════════════════════════════════
+function runLevel(){
+  const is=ISLANDS[state.currentIsland]
+  const lv=is.levels[state.currentLevel]
+  if(!lv){gameOver();return}
+  
+  document.getElementById('gameLevel').textContent=`${is.name} · ${lv.title}`
+  document.getElementById('gameHearts').textContent='❤️'.repeat(state.hearts)
+  document.getElementById('gameDone').classList.add('hide')
+  
+  const area=document.getElementById('gameContent')
+  
+  switch(lv.type){
+    case 'count': runCount(area,lv);break
+    case 'sequence': runSequence(area,lv);break
+    case 'oddEven': runOddEven(area,lv);break
+    case 'decompose': runDecompose(area,lv);break
+    case 'addSub': runAddSub(area,lv);break
+    case 'coinID': runCoinID(area,lv);break
+    case 'pay': runPay(area,lv);break
+  }
+}
+
+// ═══════════════════════════════════════════
+// GAME 1: BALLOON COUNTING
+// ═══════════════════════════════════════════
+
+const COUNT_OBJECTS={
+  '🍭':['🍭','🍭🍭','🍭🍭🍭','🍭🍭🍭🍭','🍭🍭🍭🍭🍭'],
+  '⭐':['⭐','⭐⭐','⭐⭐⭐','⭐⭐⭐⭐','⭐⭐⭐⭐⭐','⭐⭐⭐⭐⭐⭐','⭐⭐⭐⭐⭐⭐⭐'],
+  '🔵':['🔵','🔵🔵','🔵🔵🔵','🔵🔵🔵🔵','🔵🔵🔵🔵🔵','🔵🔵🔵🔵🔵🔵','🔵🔵🔵🔵🔵🔵🔵','🔵🔵🔵🔵🔵🔵🔵🔵'],
+  '🎈':['🎈','🎈🎈','🎈🎈🎈','🎈🎈🎈🎈','🎈🎈🎈🎈🎈'],
+  '🍎':['🍎','🍎🍎','🍎🍎🍎','🍎🍎🍎🍎'],
+  '🌸':['🌸','🌸🌸','🌸🌸🌸','🌸🌸🌸🌸🌸'],
+  '🌊':['🌊🌊','🌊🌊🌊🌊','🌊🌊🌊🌊🌊🌊','🌊🌊🌊🌊🌊🌊🌊🌊'],
+  '🦋':['🦋','🦋🦋','🦋🦋🦋','🦋🦋🦋🦋🦋🦋'],
+}
+
+function runCount(area,lv){
+  const max=lv.maxNum
+  const objects=Object.keys(COUNT_OBJECTS)
+  const emoji=objects[Math.floor(Math.random()*objects.length)]
+  const arr=COUNT_OBJECTS[emoji]
+  const count=Math.floor(Math.random()*Math.min(max,arr.length))+1
+  const display=arr[count-1]
+  
+  // Options: correct + 3 distractors
+  let opts=new Set([count])
+  while(opts.size<4){
+    let d=count+Math.floor(Math.random()*5)-2
+    if(d>=1&&d<=max&&d!==count)opts.add(d)
+  }
+  const optArr=Array.from(opts).sort(()=>Math.random()-.5)
+  
+  area.innerHTML=`
+    <div class="count-question">數下有幾多個 ${emoji}？</div>
+    <div class="balloon-area" style="display:flex;align-items:center;justify-content:center;font-size:${max>15?'20px':'28px'};letter-spacing:4px;padding:10px;flex-wrap:wrap;line-height:1.6">${display}</div>
+    <div class="count-options">${optArr.map(n=>`<button class="count-btn" onclick="checkCount(${n},${count},this)">${n}</button>`).join('')}</div>
+  `
+  window._countAns=count
+  window._countTries=0
+}
+
+function checkCount(n,ans,btn){
+  if(window._countDone)return
+  a();beep(500,.06)
+  if(n===ans){
+    window._countDone=true
+    btn.classList.add('correct')
+    cheer()
+    setTimeout(levelComplete,500)
+  }else{
+    btn.classList.add('wrong')
+    setTimeout(()=>btn.classList.remove('wrong'),400)
+    window._countTries=(window._countTries||0)+1
+    if(window._countTries>=3){
+      state.hearts--
+      document.getElementById('gameHearts').textContent='❤️'.repeat(state.hearts)
+      if(state.hearts<=0){setTimeout(gameOver,300)}
+      else{window._countTries=0}
+    }
+  }
+}
+
+// ═══════════════════════════════════════════
+// GAME 1B: SEQUENCE / ODD-EVEN / DECOMPOSE
+// ═══════════════════════════════════════════
+
+function runSequence(area,lv){
+  const f=lv.mode==='forward'
+  const max=f?20:15
+  const start=Math.floor(Math.random()*(max-3))+1
+  const seq=[]
+  for(let i=0;i<4;i++)seq.push(f?start+i:start-i)
+  
+  // Hide one
+  const hideIdx=Math.floor(Math.random()*4)
+  const ans=seq[hideIdx]
+  const display=seq.map((n,i)=>i===hideIdx?'❓':n)
+  
+  let opts=new Set([ans])
+  while(opts.size<4){
+    let d=ans+Math.floor(Math.random()*5)-2
+    if(d>=1&&d<=20&&d!==ans)opts.add(d)
+  }
+  const optArr=Array.from(opts).sort(()=>Math.random()-.5)
+  
+  area.innerHTML=`
+    <div class="count-question">${lv.mode==='forward'?'順序數':'倒轉數'} — 㩒答案</div>
+    <div style="display:flex;gap:10px;font-size:28px;font-weight:900;color:#fff;padding:16px">${display.map((n,i)=>`<span style="background:rgba(255,255,255,.1);padding:8px 14px;border-radius:10px;${i===hideIdx?'border:3px dashed #fbbf24;color:#fbbf24':''}">${n}</span>`).join('')}</div>
+    <div class="count-options">${optArr.map(n=>`<button class="count-btn" onclick="checkSeq(${n},${ans},this)">${n}</button>`).join('')}</div>
+  `
+  window._seqAns=ans
+}
+
+function checkSeq(n,ans,btn){
+  if(window._seqDone)return
+  if(n===ans){
+    window._seqDone=true
+    btn.classList.add('correct')
+    cheer()
+    setTimeout(levelComplete,500)
+  }else{
+    btn.classList.add('wrong')
+    setTimeout(()=>btn.classList.remove('wrong'),400)
+  }
+}
+
+function runOddEven(area,lv){
+  const mode=lv.mode
+  const max=20
+  const all=[]
+  for(let i=1;i<=max;i++){
+    if(mode==='odd'&&i%2===1)all.push(i)
+    else if(mode==='even'&&i%2===0)all.push(i)
+  }
+  // Pick 4 to display, 1 correct answer to find
+  const shuffled=all.sort(()=>Math.random()-.5).slice(0,4)
+  const display=shuffled[Math.floor(Math.random()*shuffled.length)]
+  const others=[]
+  for(let i=1;i<=max;i++){
+    if(mode==='odd'&&i%2===0)others.push(i)
+    else if(mode==='even'&&i%2===1)others.push(i)
+  }
+  const wrong=others.sort(()=>Math.random()-.5).slice(0,7)
+  const opts=shuffled.concat(wrong).sort(()=>Math.random()-.5)
+  
+  area.innerHTML=`
+    <div class="count-question">搵出所有${mode==='odd'?'單數（1,3,5...）':'雙數（2,4,6...）'}</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:10px;max-width:300px">${opts.map(n=>`<button class="count-btn" onclick="checkOE(${n},${mode==='odd'?1:0},this)" style="font-size:16px;width:auto;height:44px;padding:0 6px">${n}</button>`).join('')}</div>
+    <div style="color:#aac;font-size:11px;margin-top:8px">㩒啱嘅數字，全部㩒晒就贏</div>
+  `
+  window._oeTargets=shuffled.slice()
+  window._oeFound=[]
+  window._oeMode=mode
+}
+
+function checkOE(n,isTarget,btn){
+  if(window._oeDone)return
+  const found=window._oeFound||[]
+  if(isTarget===1){
+    if(!found.includes(n)){
+      found.push(n)
+      window._oeFound=found
+      btn.classList.add('correct')
+      btn.disabled=true
+      beep(600,.06)
+      if(found.length>=window._oeTargets.length){
+        window._oeDone=true
+        cheer()
+        setTimeout(levelComplete,500)
+      }
+    }
+  }else{
+    btn.classList.add('wrong')
+    setTimeout(()=>btn.classList.remove('wrong'),400)
+    beep(200,.08)
+  }
+}
+
+function runDecompose(area,lv){
+  const total=Math.floor(Math.random()*11)+5 // 5-15
+  const a=Math.floor(Math.random()*(total-1))+1
+  const b=total-a
+  
+  const distractors=[]
+  for(let i=2;i<15;i++){
+    if(i!==a&&i!==b)distractors.push(i)
+  }
+  const opts=[a,b,...distractors.sort(()=>Math.random()-.5).slice(0,6)].sort(()=>Math.random()-.5)
+  
+  area.innerHTML=`
+    <div class="count-question">邊兩個數字加埋等於 ${total}？</div>
+    <div style="font-size:40px;font-weight:900;color:#fbbf24;padding:16px">${total}</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px;max-width:280px">${opts.map(n=>`<button class="count-btn" onclick="checkDec(${n},[${a},${b}],this)" style="font-size:16px;width:auto;height:44px">${n}</button>`).join('')}</div>
+    <div style="color:#aac;font-size:11px">㩒兩個數字，佢哋加埋等於 ${total}</div>
+  `
+  window._decAns=[a,b]
+  window._decPicked=[]
+}
+
+function checkDec(n,ans,btn){
+  if(window._decDone)return
+  const picked=window._decPicked||[]
+  if(ans.includes(n)&&!picked.includes(n)){
+    picked.push(n)
+    window._decPicked=picked
+    btn.classList.add('correct')
+    btn.disabled=true
+    beep(600,.06)
+    if(picked.length>=2){
+      window._decDone=true
+      cheer()
+      setTimeout(levelComplete,500)
+    }
+  }else if(!ans.includes(n)&&!picked.includes(n)){
+    btn.classList.add('wrong')
+    setTimeout(()=>btn.classList.remove('wrong'),400)
+    beep(200,.08)
+  }
+}
+
+// ═══════════════════════════════════════════
+// GAME 2: FISHING ADD/SUB
+// ═══════════════════════════════════════════
+
+function runAddSub(area,lv){
+  const mode=lv.mode||'add'
+  const max=lv.maxVal||10
+  
+  let q,a
+  if(mode==='zero'){
+    const z=Math.floor(Math.random()*2)
+    if(z===0){q=`${Math.floor(Math.random()*5)+1}+0`;a=Math.floor(Math.random()*5)+1}
+    else{q=`${Math.floor(Math.random()*5)+1}-0`;a=Math.floor(Math.random()*5)+1}
+  }else if(mode==='triple'){
+    const x=Math.floor(Math.random()*4)+1,y=Math.floor(Math.random()*4)+1,z=Math.floor(Math.random()*3)+1
+    q=`${x}+${y}+${z}`;a=x+y+z
+  }else if(mode==='mix'){
+    if(Math.random()<.5){
+      const x=Math.floor(Math.random()*max)+1,y=Math.floor(Math.random()*(max-x))+1
+      q=`${x}+${y}`;a=x+y
+    }else{
+      const x=Math.floor(Math.random()*max)+1,y=Math.floor(Math.random()*x)+1
+      q=`${x}-${y}`;a=x-y
+    }
+  }else if(mode==='sub'){
+    const x=Math.floor(Math.random()*max)+1,y=Math.floor(Math.random()*x)+1
+    q=`${x}-${y}`;a=x-y
+  }else{
+    const x=Math.floor(Math.random()*max)+1,y=Math.floor(Math.random()*(max-x))+1
+    q=`${x}+${y}`;a=x+y
+  }
+  
+  // Generate fish: 1 correct + 3 wrong
+  let fish=[{val:a,correct:true}]
+  const seen=new Set([a])
+  while(fish.length<(lv.count||4)){
+    let d=a+Math.floor(Math.random()*7)-3
+    if(d>=0&&d<=max+3&&!seen.has(d)){seen.add(d);fish.push({val:d,correct:d===a})}
+  }
+  fish=fish.sort(()=>Math.random()-.5)
+  
+  // Fish emojis
+  const fEmoji=['🐟','🐠','🐡','🐙']
+  
+  area.innerHTML=`
+    <div class="fishing-question">${q} = ?</div>
+    <div class="fishing-area">
+      <div class="fishing-rod">🎣</div>
+      <div style="position:absolute;bottom:0;left:0;right:0;height:20px;background:linear-gradient(180deg,transparent,#0a3a7a);border-radius:50% 50% 0 0"></div>
+      ${fish.map((f,i)=>{
+        const x=20+Math.random()*60
+        const y=20+Math.random()*55
+        const dur=2+Math.random()*2
+        return `<div class="fish" onclick="checkFish(${f.val},${a},this)" style="left:${x}%;top:${y}%;animation-delay:${i*.3}s;animation-duration:${dur}s">
+          <div style="text-align:center">${fEmoji[i%4]}</div>
+          <div class="fish-label">${f.val}</div>
+        </div>`
+      }).join('')}
+    </div>
+  `
+  window._fishAns=a
+}
+
+function checkFish(n,ans,el){
+  if(window._fishDone)return
+  if(n===ans){
+    window._fishDone=true
+    el.style.transform='scale(1.2)'
+    cheer()
+    setTimeout(levelComplete,500)
+  }else{
+    el.style.transform='scale(.7)'
+    el.style.opacity='.3'
+    el.onclick=null
+    beep(200,.08)
+    // Lose heart
+    state.hearts--
+    document.getElementById('gameHearts').textContent='❤️'.repeat(state.hearts)
+    if(state.hearts<=0)setTimeout(gameOver,500)
+  }
+}
+
+// ═══════════════════════════════════════════
+// GAME 3: SHOPPING
+// ═══════════════════════════════════════════
+
+const COINS=[{label:'10蚊',val:10,emoji:'🪙'},
+             {label:'5蚊',val:5,emoji:'🪙'},
+             {label:'2蚊',val:2,emoji:'🪙'},
+             {label:'1蚊',val:1,emoji:'🪙'}]
+const SHOP_ITEMS=[
+  {emoji:'🍭',name:'波板糖',base:3},
+  {emoji:'🧁',name:'杯子蛋糕',base:5},
+  {emoji:'🍦',name:'雪糕',base:4},
+  {emoji:'🥤',name:'汽水',base:6},
+  {emoji:'🍿',name:'爆谷',base:7},
+  {emoji:'🍪',name:'曲奇',base:2},
+  {emoji:'🥟',name:'燒賣',base:8},
+  {emoji:'🧃',name:'果汁',base:4},
+]
+
+function runCoinID(area,lv){
+  const coin=COINS[Math.floor(Math.random()*COINS.length)]
+  area.innerHTML=`
+    <div class="count-question">邊個係 ${coin.label}？</div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:20px">${COINS.sort(()=>Math.random()-.5).map(c=>`<button class="shop-coin" onclick="checkCoinID('${c.label}',${coin.val},'${c.label}',this)" style="font-size:48px;background:rgba(255,255,255,.05);border-radius:50%;width:72px;height:72px;display:flex;align-items:center;justify-content:center;border:2px solid #334;cursor:pointer">${c.emoji}</button>`).join('')}</div>
+  `
+}
+
+function checkCoinID(label,ansVal,correctLabel,btn){
+  if(window._coinDone)return
+  if(label===correctLabel){
+    window._coinDone=true
+    btn.style.borderColor='#4ade80'
+    btn.style.background='rgba(74,222,128,.2)'
+    cheer()
+    setTimeout(levelComplete,500)
+  }else{
+    btn.style.borderColor='#ef4444'
+    btn.style.background='rgba(239,68,68,.2)'
+    setTimeout(()=>{btn.style.borderColor='#334';btn.style.background='rgba(255,255,255,.05)'},400)
+    beep(200,.08)
+  }
+}
+
+function runPay(area,lv){
+  const target=lv.amount
+  const item=SHOP_ITEMS[Math.floor(Math.random()*SHOP_ITEMS.length)]
+  
+  // Generate available coins (more than needed)
+  const avail=[]
+  let remaining=target+Math.floor(Math.random()*4)+2
+  const coinVals=[1,2,5,10]
+  while(remaining>0){
+    const v=coinVals.filter(c=>c<=remaining||remaining<3)
+    const pick=v[Math.floor(Math.random()*v.length)]
+    if(pick<=remaining){avail.push(pick);remaining-=pick}
+    else{avail.push(1);remaining--}
+  }
+  const shuffled=avail.sort(()=>Math.random()-.5)
+  
+  area.innerHTML=`
+    <div class="count-question">俾啱錢買 ${item.emoji}</div>
+    <div class="shop-item">${item.emoji}</div>
+    <div class="shop-price">$${target}.00</div>
+    <div style="color:#aac;font-size:11px;margin-bottom:4px">㩒銀仔俾錢</div>
+    <div class="shop-coin-row" id="coinRow">${shuffled.map((v,i)=>`<span class="shop-coin" data-idx="${i}" data-val="${v}" onclick="toggleCoin(${i},${v})">${COINS.find(c=>c.val===v).emoji}</span>`).join('')}</div>
+    <div class="shop-total" id="shopTotal">已揀：$0.00 / $${target}.00</div>
+    <button class="shop-pay-btn no" id="payBtn" onclick="submitPay(${target})">俾錢</button>
+  `
+  window._payAvail=shuffled
+  window._payUsed=new Set()
+  window._payTotal=0
+  window._payTarget=target
+}
+
+function toggleCoin(idx,val){
+  const used=window._payUsed
+  const el=document.querySelector(`[data-idx="${idx}"]`)
+  if(used.has(idx)){
+    used.delete(idx)
+    el.classList.remove('used')
+    window._payTotal-=val
+  }else{
+    used.add(idx)
+    el.classList.add('used')
+    window._payTotal+=val
+  }
+  const total=window._payTotal
+  const target=window._payTarget
+  const tEl=document.getElementById('shopTotal')
+  tEl.textContent=`已揀：$${total}.00 / $${target}.00`
+  tEl.className='shop-total'+(total===target?' ok':'')
+  const btn=document.getElementById('payBtn')
+  btn.className='shop-pay-btn '+(total===target?'ok':'no')
+  btn.disabled=total!==target
+  btn.textContent=total===target?'✅ 俾錢':'俾錢'
+  beep(400,.04)
+}
+
+function submitPay(target){
+  if(window._payTotal!==target||window._payDone)return
+  window._payDone=true
+  cheer()
+  setTimeout(levelComplete,500)
+}
+
+// ═══════════════════════════════════════════
+// STICKER BOOK
+// ═══════════════════════════════════════════
+
+function toggleStickers(){
+  const book=document.getElementById('stickerBook')
+  if(book.classList.contains('show')){book.classList.remove('show');return}
+  renderStickers()
+  book.classList.add('show')
+}
+
+function renderStickers(){
+  const grid=document.getElementById('stickerGrid')
+  grid.innerHTML=ALL_STICKERS.map((s,i)=>`<div class="sticker-slot${stickerOwned(i)?' filled':''}">${stickerOwned(i)?s:'❓'}</div>`).join('')
+}
+
+// ═══════════════════════════════════════════
+// GLOBAL EXPOSE
+// ═══════════════════════════════════════════
+window.showMap=showMap
+window.backToMap=backToMap
+window.startIsland=startIsland
+window.levelComplete=levelComplete
+window.gameOver=gameOver
+window.toggleStickers=toggleStickers
+window.checkCount=checkCount
+window.checkSeq=checkSeq
+window.checkOE=checkOE
+window.checkDec=checkDec
+window.checkFish=checkFish
+window.checkCoinID=checkCoinID
+window.toggleCoin=toggleCoin
+window.submitPay=submitPay
+
+// Keyboard support
+document.addEventListener('keydown',e=>{if(e.key==='Enter'){const b=document.querySelector('.title-btn');if(b&&document.getElementById('titleScreen').classList.contains('active'))b.click()}})
+
+// Init render
+renderMap()
+</script>
+</body>
+</html>
