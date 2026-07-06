@@ -361,6 +361,7 @@ const COUNT_OBJECTS={
 }
 
 function runCount(area,lv){
+  window._countDone=false
   const max=lv.maxNum
   const objects=Object.keys(COUNT_OBJECTS)
   const emoji=objects[Math.floor(Math.random()*objects.length)]
@@ -416,6 +417,7 @@ function checkCount(n,ans,btn){
 // ═══════════════════════════════════════════
 
 function runSequence(area,lv){
+  window._seqDone=false
   const f=lv.mode==='forward'
   const max=f?20:15
   const start=Math.floor(Math.random()*(max-3))+1
@@ -460,6 +462,7 @@ function checkSeq(n,ans,btn){
 }
 
 function runOddEven(area,lv){
+  window._oeDone=false
   const mode=lv.mode
   const max=20
   const all=[]
@@ -512,6 +515,7 @@ function checkOE(n,isTarget,btn){
 }
 
 function runDecompose(area,lv){
+  window._decDone=false
   let total=Math.floor(Math.random()*11)+5 // 5-15
   let a=Math.floor(Math.random()*(total-1))+1
   let b=total-a
@@ -560,6 +564,7 @@ function checkDec(n,ans,btn){
 // ═══════════════════════════════════════════
 
 function runAddSub(area,lv){
+  window._fishDone=false
   const mode=lv.mode||'add'
   const max=lv.maxVal||10
   
@@ -658,6 +663,7 @@ const SHOP_ITEMS=[
 ]
 
 function runCoinID(area,lv){
+  window._coinDone=false
   const coin=COINS[Math.floor(Math.random()*COINS.length)]
   const shuffled=[...COINS].sort(()=>Math.random()-.5)
   area.innerHTML=`
@@ -683,6 +689,9 @@ function checkCoinID(label,ansVal,correctLabel,btn){
 }
 
 function runPay(area,lv){
+  window._payDone=false
+  window._payTotal=0
+  window._payUsed=new Set()
   const target=lv.amount
   const item=SHOP_ITEMS[Math.floor(Math.random()*SHOP_ITEMS.length)]
   
