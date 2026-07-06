@@ -222,9 +222,10 @@ const ISLANDS = [
 ]
 
 // ─── STATE ───
+function loadSafe(k,def){try{return JSON.parse(localStorage.getItem(k))||def}catch(e){return def}}
 let state = {
-  progress: JSON.parse(localStorage.getItem('mathIsland') || '{}'),
-  stickers: JSON.parse(localStorage.getItem('mathIslandStickers') || '[]'),
+  progress: loadSafe('mathIsland',{}),
+  stickers: loadSafe('mathIslandStickers',[]),
   currentIsland: 0,
   currentLevel: 0,
   hearts: 3,
@@ -232,7 +233,7 @@ let state = {
   coinsUsed: [],
 }
 
-function save(){localStorage.setItem('mathIsland',JSON.stringify(state.progress));localStorage.setItem('mathIslandStickers',JSON.stringify(state.stickers))}
+function save(){try{localStorage.setItem('mathIsland',JSON.stringify(state.progress));localStorage.setItem('mathIslandStickers',JSON.stringify(state.stickers))}catch(e){}}
 function hasIsland(i){return state.progress[ISLANDS[i].id]||0}
 function setIsland(i,v){state.progress[ISLANDS[i].id]=v;save()}
 function levelDone(i,l){return hasIsland(i)>l}
@@ -367,12 +368,17 @@ function runCount(area,lv){
   const count=Math.floor(Math.random()*Math.min(max,arr.length))+1
   const display=arr[count-1]
   
-  // Options: correct + 3 distractors
+  // Options: correct + 3 distractors (wider range to avoid infinite loop)
   let opts=new Set([count])
-  while(opts.size<4){
-    let d=count+Math.floor(Math.random()*5)-2
-    if(d>=1&&d<=max&&d!==count)opts.add(d)
+  const pool=[]
+  for(let i=1;i<=max;i++)if(i!==count)pool.push(i)
+  while(opts.size<4&&pool.length>0){
+    const idx=Math.floor(Math.random()*pool.length)
+    opts.add(pool[idx])
+    pool.splice(idx,1)
   }
+  // Fallback if not enough unique values
+  while(opts.size<4){let d=opts.size+1;if(d!==count)opts.add(d)}
   const optArr=Array.from(opts).sort(()=>Math.random()-.5)
   
   area.innerHTML=`
@@ -397,7 +403,7 @@ function checkCount(n,ans,btn){
     setTimeout(()=>btn.classList.remove('wrong'),400)
     window._countTries=(window._countTries||0)+1
     if(window._countTries>=3){
-      state.hearts--
+      state.hearts=Math.max(0,state.hearts-1)
       document.getElementById('gameHearts').textContent='❤️'.repeat(state.hearts)
       if(state.hearts<=0){setTimeout(gameOver,300)}
       else{window._countTries=0}
@@ -422,10 +428,14 @@ function runSequence(area,lv){
   const display=seq.map((n,i)=>i===hideIdx?'❓':n)
   
   let opts=new Set([ans])
-  while(opts.size<4){
-    let d=ans+Math.floor(Math.random()*5)-2
-    if(d>=1&&d<=20&&d!==ans)opts.add(d)
+  const seqPool=[]
+  for(let i=1;i<=20;i++)if(i!==ans)seqPool.push(i)
+  while(opts.size<4&&seqPool.length>0){
+    const idx=Math.floor(Math.random()*seqPool.length)
+    opts.add(seqPool[idx])
+    seqPool.splice(idx,1)
   }
+  while(opts.size<4){let d=opts.size+1;if(d!==ans)opts.add(d)}
   const optArr=Array.from(opts).sort(()=>Math.random()-.5)
   
   area.innerHTML=`
@@ -502,9 +512,11 @@ function checkOE(n,isTarget,btn){
 }
 
 function runDecompose(area,lv){
-  const total=Math.floor(Math.random()*11)+5 // 5-15
-  const a=Math.floor(Math.random()*(total-1))+1
-  const b=total-a
+  let total=Math.floor(Math.random()*11)+5 // 5-15
+  let a=Math.floor(Math.random()*(total-1))+1
+  let b=total-a
+  // Ensure a and b are different numbers (otherwise clicking same button twice fails)
+  if(a===b){a=a-1;b=total-a;if(a<1){a=1;b=total-1}}
   
   const distractors=[]
   for(let i=2;i<15;i++){
@@ -553,9 +565,10 @@ function runAddSub(area,lv){
   
   let q,a
   if(mode==='zero'){
-    const z=Math.floor(Math.random()*2)
-    if(z===0){q=`${Math.floor(Math.random()*5)+1}+0`;a=Math.floor(Math.random()*5)+1}
-    else{q=`${Math.floor(Math.random()*5)+1}-0`;a=Math.floor(Math.random()*5)+1}
+    const x=Math.floor(Math.random()*5)+1
+    const isAdd=Math.random()<.5
+    if(isAdd){q=`${x}+0`;a=x}
+    else{q=`${x}-0`;a=x}
   }else if(mode==='triple'){
     const x=Math.floor(Math.random()*4)+1,y=Math.floor(Math.random()*4)+1,z=Math.floor(Math.random()*3)+1
     q=`${x}+${y}+${z}`;a=x+y+z
@@ -619,7 +632,7 @@ function checkFish(n,ans,el){
     el.onclick=null
     beep(200,.08)
     // Lose heart
-    state.hearts--
+    state.hearts=Math.max(0,state.hearts-1)
     document.getElementById('gameHearts').textContent='❤️'.repeat(state.hearts)
     if(state.hearts<=0)setTimeout(gameOver,500)
   }
@@ -646,9 +659,10 @@ const SHOP_ITEMS=[
 
 function runCoinID(area,lv){
   const coin=COINS[Math.floor(Math.random()*COINS.length)]
+  const shuffled=[...COINS].sort(()=>Math.random()-.5)
   area.innerHTML=`
     <div class="count-question">邊個係 ${coin.label}？</div>
-    <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:20px">${COINS.sort(()=>Math.random()-.5).map(c=>`<button class="shop-coin" onclick="checkCoinID('${c.label}',${coin.val},'${c.label}',this)" style="font-size:48px;background:rgba(255,255,255,.05);border-radius:50%;width:72px;height:72px;display:flex;align-items:center;justify-content:center;border:2px solid #334;cursor:pointer">${c.emoji}</button>`).join('')}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:20px">${shuffled.map(c=>`<button class="shop-coin" onclick="checkCoinID('${c.label}',${coin.val},'${coin.label}',this)" style="font-size:48px;background:rgba(255,255,255,.05);border-radius:50%;width:72px;height:72px;display:flex;align-items:center;justify-content:center;border:2px solid #334;cursor:pointer">${c.emoji}</button>`).join('')}</div>
   `
 }
 
