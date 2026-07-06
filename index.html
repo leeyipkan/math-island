@@ -133,7 +133,7 @@ body{font-family:'Noto Sans HK',sans-serif;touch-action:manipulation;-webkit-use
 <div class="screen map-screen" id="mapScreen">
   <div class="map-header">
     <div class="map-title">🏝️ 探險地圖</div>
-    <div class="map-stickers" onclick="toggleStickers()">🏆 <span id="stickerCount">0</span>/24 貼紙 📖</div>
+    <div class="map-stickers" onclick="toggleStickers()">🏆 <span id="stickerCount">0</span>/<span id="stickerTotal">24</span> 貼紙 📖</div>
   </div>
   <div class="map-scroll" id="mapScroll"></div>
 </div>
@@ -177,6 +177,8 @@ const ALL_STICKERS = [
   '🐟','🐠','🐡','🐙','🦐','🐬','🐳','🐋',
   // Island 3: 買嘢食 (8 stickers)
   '🍎','🍊','🍋','🍇','🍓','🍑','🍒','🍌',
+  // Island 4: 數字王國 (8 stickers)
+  '🦁','🐯','🐻','🐨','🦅','🐉','🦜','🐘',
 ]
 
 const ISLANDS = [
@@ -218,6 +220,19 @@ const ISLANDS = [
       { title:'組合 3', desc:'俾啱 8 蚊', type:'pay', amount:8 },
       { title:'10蚊', desc:'俾啱 10 蚊', type:'pay', amount:10 },
     ], stickerOffset:16
+  },
+  {
+    id:'numbers', name:'🔢 數字王國', desc:'數到100、十位個位',
+    icon:'👑', levels:[
+      { title:'數到30', desc:'數下有幾多粒星星', type:'countBig', maxNum:30 },
+      { title:'數到50', desc:'數多啲星星', type:'countBig', maxNum:50 },
+      { title:'數到100', desc:'一次過數晒', type:'countBig', maxNum:100 },
+      { title:'十位個位', desc:'睇下有幾多個十', type:'placeVal' },
+      { title:'邊個大？', desc:'㩒出較大嘅數字', type:'compare' },
+      { title:'順序到100', desc:'㩒出下一個數字', type:'seqBig' },
+      { title:'隔住數', desc:'2個、5個、10個一數', type:'skipCount' },
+      { title:'數字謎題', desc:'㩒返缺失嘅數字', type:'numPuzzle' },
+    ], stickerOffset:24
   },
 ]
 
@@ -264,9 +279,10 @@ function renderMap(){
   const total=ALL_STICKERS.length
   const owned=state.stickers.length
   document.getElementById('stickerCount').textContent=owned
+  document.getElementById('stickerTotal').textContent=ALL_STICKERS.length
   ISLANDS.forEach((is,i)=>{
     const doneLv=hasIsland(i)
-    const locked=i>0&&doneLv<ISLANDS[i-1].levels.length
+    const locked=i>0&&hasIsland(i-1)<ISLANDS[i-1].levels.length
     const allDone=doneLv>=is.levels.length
     h+=`<div class="island${locked?' locked':''}${allDone?' completed':''}" onclick="${locked?'':'startIsland('+i+')'}">
       <div class="island-icon">${is.icon}</div>
@@ -342,6 +358,12 @@ function runLevel(){
     case 'addSub': runAddSub(area,lv);break
     case 'coinID': runCoinID(area,lv);break
     case 'pay': runPay(area,lv);break
+    case 'countBig': runCountBig(area,lv);break
+    case 'placeVal': runPlaceVal(area,lv);break
+    case 'compare': runCompare(area,lv);break
+    case 'seqBig': runSeqBig(area,lv);break
+    case 'skipCount': runSkipCount(area,lv);break
+    case 'numPuzzle': runNumPuzzle(area,lv);break
   }
 }
 
@@ -758,6 +780,217 @@ function submitPay(target){
 }
 
 // ═══════════════════════════════════════════
+// GAME 4: NUMBER KINGDOM (countBig, placeVal, compare, seqBig, skipCount, numPuzzle)
+// ═══════════════════════════════════════════
+
+function runCountBig(area,lv){
+  window._cbigDone=false
+  const max=lv.maxNum
+  const count=Math.floor(Math.random()*(max-5))+6 // 6 to max
+  const rows=Math.ceil(count/10)
+  const lastRow=count%10
+  const emoji=Math.random()<.5?'🔵':'⭐'
+  let grid='<div style="display:flex;flex-direction:column;gap:3px;padding:6px">'
+  for(let r=0;r<rows;r++){
+    const items=(r===rows-1&&lastRow>0)?lastRow:10
+    grid+='<div style="display:flex;gap:2px;justify-content:center">'
+    for(let i=0;i<items;i++){
+      const sz=max>50?'12px':'16px'
+      grid+=`<span style="font-size:${sz}">${emoji}</span>`
+    }
+    grid+='</div>'
+  }
+  grid+='</div>'
+  // Options
+  let opts=new Set([count])
+  const pool=[]
+  for(let i=1;i<=max;i++)if(i!==count)pool.push(i)
+  while(opts.size<4&&pool.length>0){
+    const idx=Math.floor(Math.random()*pool.length)
+    opts.add(pool[idx]);pool.splice(idx,1)
+  }
+  while(opts.size<4){let d=opts.size+1;if(d!==count)opts.add(d)}
+  const optArr=Array.from(opts).sort(()=>Math.random()-.5)
+  area.innerHTML=`
+    <div class="count-question">數下有幾多粒 ${emoji}？</div>
+    <div style="overflow-y:auto;flex:1;display:flex;align-items:center;justify-content:center;width:100%">${grid}</div>
+    <div class="count-options">${optArr.map(n=>`<button class="count-btn" onclick="checkCountBig(${n},${count},this)">${n}</button>`).join('')}</div>
+  `
+  window._cbigAns=count
+  window._cbigTries=0
+}
+
+function checkCountBig(n,ans,btn){
+  if(window._cbigDone)return
+  a();beep(500,.06)
+  if(n===ans){
+    window._cbigDone=true;btn.classList.add('correct');cheer()
+    setTimeout(levelComplete,500)
+  }else{
+    btn.classList.add('wrong')
+    setTimeout(()=>btn.classList.remove('wrong'),400)
+    window._cbigTries=(window._cbigTries||0)+1
+    if(window._cbigTries>=3){
+      state.hearts=Math.max(0,state.hearts-1)
+      document.getElementById('gameHearts').textContent='❤️'.repeat(state.hearts)
+      if(state.hearts<=0)setTimeout(gameOver,300);else window._cbigTries=0
+    }
+  }
+}
+
+function runPlaceVal(area,lv){
+  window._pvDone=false
+  const num=Math.floor(Math.random()*90)+10 // 10-99
+  const tens=Math.floor(num/10)
+  const ones=num%10
+  // Options
+  let opts=new Set([num])
+  while(opts.size<4){
+    let d=num+Math.floor(Math.random()*11)-5
+    if(d>=1&&d<=99&&d!==num)opts.add(d)
+  }
+  const optArr=Array.from(opts).sort(()=>Math.random()-.5)
+  // Visual: show tens as stacks of 10, ones as singles
+  let vis='<div style="display:flex;gap:12px;align-items:center;justify-content:center;padding:12px;flex-wrap:wrap">'
+  // Tens blocks
+  for(let i=0;i<tens;i++){
+    vis+='<div style="display:flex;flex-direction:column;align-items:center">'
+    vis+='<div style="font-size:24px;background:#4a6a9a;border-radius:6px;padding:4px 8px;color:#fff;font-weight:900">🔟</div>'
+    vis+='</div>'
+  }
+  if(tens>0)vis+=`<div style="color:#aac;font-size:12px;margin:0 4px">${tens}個十</div>`
+  // Ones
+  if(ones>0){
+    vis+='<div style="display:flex;gap:3px">'
+    for(let i=0;i<ones;i++)vis+='<span style="font-size:22px">🔵</span>'
+    vis+='</div>'
+    vis+=`<div style="color:#aac;font-size:12px">=${ones}個一</div>`
+  }
+  vis+='</div>'
+  area.innerHTML=`
+    <div class="count-question">呢個係咩數字？</div>
+    ${vis}
+    <div class="count-options">${optArr.map(n=>`<button class="count-btn" onclick="checkPlaceVal(${n},${num},this)">${n}</button>`).join('')}</div>
+  `
+}
+
+function checkPlaceVal(n,ans,btn){
+  if(window._pvDone)return
+  if(n===ans){window._pvDone=true;btn.classList.add('correct');cheer();setTimeout(levelComplete,500)}
+  else{btn.classList.add('wrong');setTimeout(()=>btn.classList.remove('wrong'),400);beep(200,.08)}
+}
+
+function runCompare(area,lv){
+  window._cpDone=false
+  let a=Math.floor(Math.random()*98)+2,b
+  do{b=Math.floor(Math.random()*99)+1}while(b===a||Math.abs(a-b)<3)
+  const bigger=Math.max(a,b)
+  const placed=Math.random()<.5?[a,b]:[b,a]
+  area.innerHTML=`
+    <div class="count-question">邊個數字大啲？</div>
+    <div style="display:flex;gap:20px;justify-content:center;padding:20px;font-size:40px;font-weight:900">
+      <button class="count-btn" onclick="checkCompare(${placed[0]},${bigger},this)" style="font-size:28px;width:80px;height:64px">${placed[0]}</button>
+      <div style="color:#aac;display:flex;align-items:center">vs</div>
+      <button class="count-btn" onclick="checkCompare(${placed[1]},${bigger},this)" style="font-size:28px;width:80px;height:64px">${placed[1]}</button>
+    </div>
+  `
+}
+
+function checkCompare(n,bigger,btn){
+  if(window._cpDone)return
+  if(n===bigger){window._cpDone=true;btn.classList.add('correct');cheer();setTimeout(levelComplete,500)}
+  else{btn.classList.add('wrong');setTimeout(()=>btn.classList.remove('wrong'),400);beep(200,.08)}
+}
+
+function runSeqBig(area,lv){
+  window._sbDone=false
+  const start=Math.floor(Math.random()*93)+1 // 1-93
+  const seq=[]
+  for(let i=0;i<4;i++)seq.push(start+i)
+  const hideIdx=Math.floor(Math.random()*4)
+  const ans=seq[hideIdx]
+  const display=seq.map((n,i)=>i===hideIdx?'❓':n)
+  let opts=new Set([ans])
+  const p=[]
+  for(let i=start-2;i<=start+6;i++)if(i!==ans&&i>=1)opts.add(i)
+  const pool=Array.from(opts).filter(v=>v!==ans).sort(()=>Math.random()-.5).slice(0,3)
+  const optArr=[ans,...pool].sort(()=>Math.random()-.5)
+  area.innerHTML=`
+    <div class="count-question">順序數 — 㩒答案</div>
+    <div style="display:flex;gap:8px;font-size:24px;font-weight:900;color:#fff;padding:16px;flex-wrap:wrap;justify-content:center">${display.map((n,i)=>`<span style="background:rgba(255,255,255,.1);padding:6px 12px;border-radius:10px;${i===hideIdx?'border:3px dashed #fbbf24;color:#fbbf24':''}">${n}</span>`).join('')}</div>
+    <div class="count-options">${optArr.map(n=>`<button class="count-btn" onclick="checkSeqBig(${n},${ans},this)">${n}</button>`).join('')}</div>
+  `
+}
+
+function checkSeqBig(n,ans,btn){
+  if(window._sbDone)return
+  if(n===ans){window._sbDone=true;btn.classList.add('correct');cheer();setTimeout(levelComplete,500)}
+  else{btn.classList.add('wrong');setTimeout(()=>btn.classList.remove('wrong'),400)}
+}
+
+function runSkipCount(area,lv){
+  window._skDone=false
+  const step=Math.random()<.33?2:(Math.random()<.5?5:10)
+  const start=step===2?(Math.floor(Math.random()*5)*2+2):(step===5?(Math.floor(Math.random()*4+1)*5):(Math.floor(Math.random()*5+1)*10))
+  const seq=[]
+  for(let i=0;i<4;i++)seq.push(start+i*step)
+  const hideIdx=Math.floor(Math.random()*4)
+  const ans=seq[hideIdx]
+  const display=seq.map((n,i)=>i===hideIdx?'❓':n)
+  let opts=new Set([ans])
+  for(let i=1;i<=5;i++){const d=ans-i*step;if(d>0)opts.add(d);opts.add(ans+i*step)}
+  const pool=Array.from(opts).filter(v=>v!==ans).sort(()=>Math.random()-.5).slice(0,3)
+  const optArr=[ans,...pool].sort(()=>Math.random()-.5)
+  const stepLabel=step===2?'2個一數':(step===5?'5個一數':'10個一數')
+  area.innerHTML=`
+    <div class="count-question">${stepLabel} — 㩒答案</div>
+    <div style="display:flex;gap:8px;font-size:24px;font-weight:900;color:#fff;padding:16px;flex-wrap:wrap;justify-content:center">${display.map((n,i)=>`<span style="background:rgba(255,255,255,.1);padding:6px 12px;border-radius:10px;${i===hideIdx?'border:3px dashed #fbbf24;color:#fbbf24':''}">${n}</span>`).join('')}</div>
+    <div class="count-options">${optArr.map(n=>`<button class="count-btn" onclick="checkSkipCount(${n},${ans},this)">${n}</button>`).join('')}</div>
+  `
+}
+
+function checkSkipCount(n,ans,btn){
+  if(window._skDone)return
+  if(n===ans){window._skDone=true;btn.classList.add('correct');cheer();setTimeout(levelComplete,500)}
+  else{btn.classList.add('wrong');setTimeout(()=>btn.classList.remove('wrong'),400)}
+}
+
+function runNumPuzzle(area,lv){
+  window._npDone=false
+  // Show a number line/BINGO style: 3x3 grid with 1 missing
+  const base=Math.floor(Math.random()*80)+1 // 1-80
+  const grid=[]
+  for(let r=0;r<3;r++){
+    const row=[]
+    for(let c=0;c<3;c++)row.push(base+r*3+c)
+    grid.push(row)
+  }
+  const hideR=Math.floor(Math.random()*3),hideC=Math.floor(Math.random()*3)
+  const ans=grid[hideR][hideC]
+  // Options
+  let opts=new Set([ans])
+  for(let i=1;i<=6;i++){
+    const d=ans+i
+    if(d<=99)opts.add(d)
+    const d2=ans-i
+    if(d2>=1)opts.add(d2)
+  }
+  const pool=Array.from(opts).filter(v=>v!==ans).sort(()=>Math.random()-.5).slice(0,5)
+  const optArr=[ans,...pool].sort(()=>Math.random()-.5)
+  area.innerHTML=`
+    <div class="count-question">缺失嘅數字係咩？</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;max-width:240px">${grid.map((row,r)=>row.map((n,c)=>`<div style="background:${r===hideR&&c===hideC?'rgba(251,191,36,.2)':'rgba(255,255,255,.1)'};border:${r===hideR&&c===hideC?'3px dashed #fbbf24':'2px solid #334'};border-radius:12px;padding:12px;text-align:center;font-size:24px;font-weight:900;color:${r===hideR&&c===hideC?'#fbbf24':'#fff'}">${r===hideR&&c===hideC?'❓':n}</div>`).join('')).join('')}</div>
+    <div class="count-options" style="gap:6px">${optArr.map(n=>`<button class="count-btn" onclick="checkNumPuzzle(${n},${ans},this)" style="font-size:14px;width:48px;height:42px">${n}</button>`).join('')}</div>
+  `
+}
+
+function checkNumPuzzle(n,ans,btn){
+  if(window._npDone)return
+  if(n===ans){window._npDone=true;btn.classList.add('correct');cheer();setTimeout(levelComplete,500)}
+  else{btn.classList.add('wrong');setTimeout(()=>btn.classList.remove('wrong'),400)}
+}
+
+// ═══════════════════════════════════════════
 // STICKER BOOK
 // ═══════════════════════════════════════════
 
@@ -790,6 +1023,12 @@ window.checkFish=checkFish
 window.checkCoinID=checkCoinID
 window.toggleCoin=toggleCoin
 window.submitPay=submitPay
+window.checkCountBig=checkCountBig
+window.checkPlaceVal=checkPlaceVal
+window.checkCompare=checkCompare
+window.checkSeqBig=checkSeqBig
+window.checkSkipCount=checkSkipCount
+window.checkNumPuzzle=checkNumPuzzle
 
 // Keyboard support
 document.addEventListener('keydown',e=>{if(e.key==='Enter'){const b=document.querySelector('.title-btn');if(b&&document.getElementById('titleScreen').classList.contains('active'))b.click()}})
