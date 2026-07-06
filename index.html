@@ -695,15 +695,19 @@ function runPay(area,lv){
   const target=lv.amount
   const item=SHOP_ITEMS[Math.floor(Math.random()*SHOP_ITEMS.length)]
   
-  // Generate available coins (more than needed)
-  const avail=[]
-  let remaining=target+Math.floor(Math.random()*4)+2
+  // Generate available coins — guarantee at least one valid combo for target
   const coinVals=[1,2,5,10]
-  while(remaining>0){
-    const v=coinVals.filter(c=>c<=remaining||remaining<3)
-    const pick=v[Math.floor(Math.random()*v.length)]
-    if(pick<=remaining){avail.push(pick);remaining-=pick}
-    else{avail.push(1);remaining--}
+  const avail=[]
+  // First, build one exact combination for target (greedy coin change)
+  let t=target
+  const sorted=[...coinVals].sort((a,b)=>b-a)
+  for(const v of sorted){
+    while(t>=v){avail.push(v);t-=v}
+  }
+  // Add extra random coins (3-5 more)
+  const extraCount=3+Math.floor(Math.random()*3)
+  for(let i=0;i<extraCount;i++){
+    avail.push(coinVals[Math.floor(Math.random()*coinVals.length)])
   }
   const shuffled=avail.sort(()=>Math.random()-.5)
   
